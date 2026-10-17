@@ -35,7 +35,7 @@
 
 - **⚡ Dual-Engine Architecture (Hybrid):**
   - **Offline Heuristic & Ethics Engine:** Fully functional out-of-the-box without requiring an API key or internet connection.
-  - **Live Google Gemini API Integration:** Connect your Gemini API key (e.g., `gemini-2.5-flash`) for deep generative semantic transformation. Keys remain strictly client-side in `localStorage`.
+  - **Live Google Gemini API Integration:** Connect your Gemini API key (e.g., `gemini-3.8-flash`) for deep generative semantic transformation. Keys remain strictly client-side in `localStorage`.
 - **📊 5-Pillar Responsible AI Readiness Radar:**
   - Real-time audit scoring (0–100) across Clarity, Context, Constraints, Uncertainty Defense, and Ethics/Safety.
   - Granular severity badges: `CRITICAL RISK`, `HIGH DEFICIENCY`, `WARNING`, and `SUGGESTION`.

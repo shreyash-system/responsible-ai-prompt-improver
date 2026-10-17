@@ -126,7 +126,7 @@ export function App() {
             role: geminiResult.role || 'Responsible AI Specialist',
             source: 'gemini'
           };
-          showToast('Enhanced via Google Gemini 2.5 Flash!', 'success');
+          showToast('Enhanced via Google Gemini 3.8 Flash!', 'success');
         } catch (apiErr) {
           console.warn('Gemini API failed, falling back to heuristic engine:', apiErr);
           showToast(`Gemini API: ${apiErr.message}. Fallback to Offline Engine.`, 'error');

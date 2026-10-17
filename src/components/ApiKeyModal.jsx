@@ -55,7 +55,7 @@ export function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, onClearApiK
         <div className="modal-body">
           <p className="modal-description">
             AegisPrompt comes with a powerful <strong>built-in offline ethics and heuristic engine</strong> that works without any API key.
-            Optionally connecting your Google Gemini API key enables deep generative semantic enhancement with <code>gemini-2.5-flash</code>.
+            Optionally connecting your Google Gemini API key enables deep generative semantic enhancement with <code>gemini-3.8-flash</code>.
           </p>
 
           <div className="form-group">

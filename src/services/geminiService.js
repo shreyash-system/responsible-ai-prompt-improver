@@ -1,6 +1,6 @@
 // Google Gemini API Integration for Generative Prompt Enhancement
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-3.8-flash';
 
 export async function testGeminiApiKey(apiKey) {
   if (!apiKey || apiKey.trim().length < 10) {

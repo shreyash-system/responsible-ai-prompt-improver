@@ -26,7 +26,7 @@ export function Header({ theme, toggleTheme, onOpenApiKeyModal, onOpenHistory, a
             {apiKey ? (
               <>
                 <Sparkles size={14} />
-                <span>Gemini 2.5 Flash</span>
+                <span>Gemini 3.8 Flash</span>
               </>
             ) : (
               <>
