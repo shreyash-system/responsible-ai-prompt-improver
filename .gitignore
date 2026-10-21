@@ -29,3 +29,5 @@ __pycache__/
 *$py.class
 .env
 
+# Streamlit secrets (never commit)
+.streamlit/secrets.toml

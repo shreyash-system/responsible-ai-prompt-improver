@@ -84,18 +84,33 @@ d:/VIT/TY/ERA/HA Project/
 
 ## 💻 Getting Started
 
-### 1. Installation & Local Development
+### 1. Running the Streamlit App (Python)
 ```bash
 # Install dependencies
-npm install
+pip install -r requirements.txt
 
-# Start Vite dev server
+# Launch Streamlit app
+streamlit run app.py
+```
+Open [http://localhost:8501](http://localhost:8501) in your browser.
+
+**Live Deployment:** [responsible-ai-prompt-improver.streamlit.app](https://responsible-ai-prompt-improver.streamlit.app/)
+
+### 2. Gemini API Configuration
+The app supports real-time Gemini AI integration:
+1. **Sidebar Input:** Enter your Gemini API key directly into the sidebar API Key Settings.
+2. **Streamlit Secrets (`.streamlit/secrets.toml`):**
+   ```toml
+   GEMINI_API_KEY = "your-gemini-api-key-here"
+   ```
+3. **Streamlit Cloud Dashboard:** Add `GEMINI_API_KEY` under **App Settings > Secrets**.
+
+---
+
+### 3. Alternative Web Client (React + Vite)
+```bash
+npm install
 npm run dev
 ```
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### 2. Building for Production
-```bash
-npm run build
-```
-Creates an optimized production bundle in `/dist`.

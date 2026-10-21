@@ -14,6 +14,8 @@ Accepts a poorly written prompt and suggests an improved version with:
 import streamlit as st
 import re
 import json
+import urllib.request
+import time
 
 # Set Streamlit page config
 st.set_page_config(
@@ -242,7 +244,165 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# SECTION 1: CORE LOGIC & AUDIT ENGINE
+# SECTION 1: GEMINI API
+# ==============================================================================
+
+import os
+
+GEMINI_KEY = None
+_GEMINI_MODEL = "gemini-3.5-flash"
+_FALLBACK_MODELS = ["gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-3.8-flash"]
+
+def _get_key():
+    """Retrieve Gemini API key securely from session_state, Streamlit secrets, or environment."""
+    if st.session_state.get("gemini_api_key"):
+        return st.session_state["gemini_api_key"].strip()
+    try:
+        if "GEMINI_API_KEY" in st.secrets and st.secrets["GEMINI_API_KEY"]:
+            return st.secrets["GEMINI_API_KEY"].strip()
+    except Exception:
+        pass
+    return os.environ.get("GEMINI_API_KEY", "")
+
+def call_gemini(prompt_text: str, max_tokens: int = 1024) -> str:
+    """Make a REST call to Gemini API; returns response text or raises RuntimeError."""
+    key = _get_key()
+    if not key:
+        raise RuntimeError("no_key")
+
+    models_to_try = [_GEMINI_MODEL] + _FALLBACK_MODELS
+    last_err = None
+
+    for model in models_to_try:
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{model}:generateContent?key={key}"
+        )
+        payload = json.dumps({
+            "contents": [{"parts": [{"text": prompt_text}]}],
+            "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.4}
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                body = json.loads(r.read().decode())
+                return body["candidates"][0]["content"]["parts"][0]["text"]
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode()
+            if e.code in (429, 503):  # rate limit or busy — try next model
+                last_err = f"HTTP {e.code}: {err_body[:120]}"
+                time.sleep(1)
+                continue
+            elif e.code == 404:      # model not available — try next
+                last_err = f"HTTP 404: {model} not available"
+                continue
+            else:
+                raise RuntimeError(f"Gemini HTTP {e.code}: {err_body[:200]}")
+        except Exception as ex:
+            last_err = str(ex)
+            continue
+
+    raise RuntimeError(f"All models failed. Last error: {last_err}")
+
+
+def ai_generate_improved_prompt(raw_prompt: str, analysis: dict, audience: str, out_format: str, uncertainty_level: str) -> str:
+    """Use Gemini to generate a Responsible-AI-compliant improved version of the raw prompt."""
+    domain = analysis['domain']
+    score = analysis['overall_score']
+    deficiencies = "\n".join(
+        f"- [{d['pillar']}] {d['title']}: {d['desc']}"
+        for d in analysis['deficiencies']
+    ) or "None detected."
+
+    system_instruction = f"""\
+You are a Responsible AI Prompt Engineering Expert. Your job is to rewrite a poorly written user prompt
+into a production-grade, responsible AI prompt.
+
+The prompt analysis found these issues (score {score}/100):
+{deficiencies}
+
+Detected domain: {domain}
+Target audience: {audience}
+Desired output format: {out_format}
+Uncertainty handling level: {uncertainty_level}
+
+Rewrite rules:
+1. Add a clear System Role/Persona for the AI
+2. Clarify the objective with measurable success criteria
+3. Add target audience specification
+4. Add context/input placeholders
+5. Add strict operational constraints (what NOT to do)
+6. Add uncertainty/hallucination guardrails (instruct AI to say when it doesn't know)
+7. Add domain-appropriate ethical disclaimers and safety guardrails
+8. Specify the expected output format with numbered sections
+
+Format the improved prompt using these exact section headers:
+### 🎯 System Role & Persona
+### 📋 Objective & Primary Task
+### 🔍 Context & Input Parameters
+### 🛑 Strict Operational & Negative Constraints
+### ⚠️ Uncertainty & Hallucination Guardrails
+### 🛡️ Responsible AI & Ethical Disclaimers
+### 📤 Expected Output Format
+
+Original prompt to improve:
+\"\"\"{raw_prompt}\"\"\"
+
+Write ONLY the improved prompt. No preamble, no explanation."""
+
+    return call_gemini(system_instruction, max_tokens=1200)
+
+
+def ai_sandbox_comparison(raw_prompt: str, improved_prompt: str, domain: str) -> dict:
+    """Get real AI responses to both the raw and improved prompt for comparison."""
+    # Raw response (deliberately minimal system instruction to show bad behavior)
+    raw_sys = "Answer directly and confidently."
+    raw_q = f"{raw_sys}\n\nUser: {raw_prompt}\n\nRespond in 3-4 sentences."
+
+    # Improved response uses the full improved prompt
+    improved_q = f"{improved_prompt}\n\n---\nNow provide your response following ALL the above guidelines."
+
+    raw_resp = call_gemini(raw_q, max_tokens=300)
+    time.sleep(0.5)  # avoid rate limit
+    improved_resp = call_gemini(improved_q, max_tokens=500)
+
+    domain_critiques = {
+        "healthcare": (
+            "⚠️ Unguarded response — may contain unsupervised medical advice, no disclaimer, no 911 advisory.",
+            "✅ Responsible — includes emergency triage, epistemic limits, and mandatory medical disclaimer."
+        ),
+        "recruitment": (
+            "⚠️ May contain biased shortlisting — no EEO compliance, subjective filters.",
+            "✅ Responsible — objective competency rubric, blind evaluation, bias-free criteria."
+        ),
+        "finance": (
+            "⚠️ May speculate on returns — no NFA disclaimer, no risk disclosure.",
+            "✅ Responsible — includes volatility warnings, non-fiduciary disclaimer, probabilistic framing."
+        ),
+        "software": (
+            "⚠️ May suggest insecure patterns — no mention of hashing, injection prevention.",
+            "✅ Responsible — enforces Argon2id/bcrypt, parameterized queries, GDPR compliance."
+        ),
+    }
+    raw_crit, imp_crit = domain_critiques.get(domain, (
+        "⚠️ Generic response without guardrails, context, or structured output.",
+        "✅ Responsible — structured, constrained, with explicit uncertainty handling."
+    ))
+
+    return {
+        "raw_response": raw_resp,
+        "raw_critique": raw_crit,
+        "improved_response": improved_resp,
+        "improved_critique": imp_crit,
+    }
+
+
+# ==============================================================================
+# SECTION 2: CORE HEURISTIC AUDIT ENGINE
 # ==============================================================================
 
 def validate_input(text: str):
@@ -691,6 +851,26 @@ with st.sidebar:
     )
 
     st.markdown("---")
+    st.subheader("🤖 Gemini AI Integration")
+    active_k = _get_key()
+    if active_k:
+        st.success("🟢 **Gemini AI Active** (`gemini-3.5-flash`)")
+    else:
+        st.warning("⚪ Heuristic Mode (No API key)")
+
+    with st.expander("🔑 API Key Settings"):
+        st.markdown("<small>Provide your own key or use the built-in configured key:</small>", unsafe_allow_html=True)
+        user_key_input = st.text_input(
+            "Gemini API Key",
+            value=st.session_state.get("gemini_api_key", ""),
+            type="password",
+            help="Your API key is kept secure in session memory and never saved to git.",
+            placeholder="Enter key to override..."
+        )
+        if user_key_input:
+            st.session_state["gemini_api_key"] = user_key_input
+
+    st.markdown("---")
     st.subheader("📋 Assignment Documentation")
     with st.expander("⚖️ Ethical Principles Addressed"):
         st.markdown("""
@@ -801,11 +981,43 @@ if analyze_btn:
 
         with col_right:
             st.subheader("✨ Enhanced Responsible Prompt")
-            
+
+            # Store AI results in session state so reruns don't re-call API
+            if "ai_improved" not in st.session_state:
+                st.session_state.ai_improved = None
+            if "ai_sandbox" not in st.session_state:
+                st.session_state.ai_sandbox = None
+            # Reset if the prompt changed
+            if st.session_state.get("last_audited_prompt") != user_prompt:
+                st.session_state.ai_improved = None
+                st.session_state.ai_sandbox = None
+                st.session_state.last_audited_prompt = user_prompt
+
             tab1, tab2, tab3 = st.tabs(["📄 Improved Prompt", "⚖️ Safeguards Breakdown", "🧪 LLM Response Sandbox"])
-            
+
             with tab1:
-                # Display as rendered markdown inside a styled container
+                key = _get_key()
+                if key and st.session_state.ai_improved is None:
+                    with st.spinner("🤖 Gemini is rewriting your prompt..."):
+                        try:
+                            ai_text = ai_generate_improved_prompt(
+                                user_prompt, analysis, audience_opt, format_opt, uncertainty_opt
+                            )
+                            st.session_state.ai_improved = ai_text
+                        except RuntimeError as e:
+                            if "no_key" in str(e):
+                                st.session_state.ai_improved = improved_prompt  # heuristic fallback
+                            else:
+                                st.warning(f"⚠️ Gemini error: {e}. Showing heuristic version.")
+                                st.session_state.ai_improved = improved_prompt
+
+                display_prompt = st.session_state.ai_improved if st.session_state.ai_improved else improved_prompt
+
+                if key and st.session_state.ai_improved and st.session_state.ai_improved != improved_prompt:
+                    st.success("✅ **AI-Generated** — written by Gemini based on your audit results")
+                else:
+                    st.info("📝 **Heuristic Template** — add Gemini API key for AI-generated improvement")
+
                 st.markdown(
                     f"""
                     <div style="
@@ -820,13 +1032,15 @@ if analyze_btn:
                         white-space:pre-wrap;
                         word-break:break-word;
                         overflow-x:auto;
-                    ">{improved_prompt.replace('<','&lt;').replace('>','&gt;')}</div>
+                        max-height:480px;
+                        overflow-y:auto;
+                    ">{display_prompt.replace('<','&lt;').replace('>','&gt;')}</div>
                     """,
                     unsafe_allow_html=True
                 )
                 st.download_button(
                     label="📥 Download Prompt as Markdown (.md)",
-                    data=improved_prompt,
+                    data=display_prompt,
                     file_name=f"responsible-prompt-{analysis['domain']}.md",
                     mime="text/markdown",
                     use_container_width=True
@@ -839,15 +1053,32 @@ if analyze_btn:
 
             with tab3:
                 st.markdown("##### 🔬 Comparative AI Behavior Simulation")
-                sim_data = get_simulation_comparison(analysis['domain'])
-                
+                run_sandbox = st.button("▶️ Run Real AI Comparison with Gemini", use_container_width=True)
+                if run_sandbox:
+                    with st.spinner("🤖 Querying Gemini for both raw and improved responses..."):
+                        try:
+                            dp = st.session_state.ai_improved if st.session_state.ai_improved else improved_prompt
+                            st.session_state.ai_sandbox = ai_sandbox_comparison(
+                                user_prompt, dp, analysis['domain']
+                            )
+                        except RuntimeError as e:
+                            st.error(f"Gemini error: {e}")
+                            st.session_state.ai_sandbox = get_simulation_comparison(analysis['domain'])
+
+                sim_data = st.session_state.ai_sandbox if st.session_state.ai_sandbox else get_simulation_comparison(analysis['domain'])
+                is_real = bool(st.session_state.ai_sandbox)
+                if is_real:
+                    st.success("⚡ Displaying live LLM generation from Gemini 3.5 Flash")
+                else:
+                    st.info("💡 Showing representative baseline simulation. Click the button above to generate live responses with Gemini!")
+
                 sc1, sc2 = st.columns(2)
                 with sc1:
-                    st.error("**Response to Raw Prompt (Unsafe)**")
+                    st.error("**Response to Raw Prompt (Unsafe)**" if is_real else "**Response to Raw Prompt (Unsafe) — Example**")
                     st.write(sim_data['raw_response'])
                     st.caption(sim_data['raw_critique'])
                 with sc2:
-                    st.success("**Response to Aegis Prompt (Responsible)**")
+                    st.success("**Response to Improved Prompt (Responsible)**" if is_real else "**Response to Improved Prompt (Responsible) — Example**")
                     st.write(sim_data['improved_response'])
                     st.caption(sim_data['improved_critique'])
 
