@@ -23,63 +23,199 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling for clean modern look
+# Custom Styling — Light Mode with Inter (Claude-style) font
 st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+    /* ── Apply Inter font globally (Claude-style clean sans-serif) ── */
+    html, body, [class*="css"], .stApp, .stMarkdown, .stTextInput,
+    .stTextArea, .stSelectbox, .stButton, .stMetric, .stAlert,
+    .stExpander, .stTabs, .stSidebar, p, span, div, label, h1, h2, h3 {
+        font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif !important;
+    }
+
+    /* ── Force light mode backgrounds ── */
+    .stApp {
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+    }
+    .stSidebar {
+        background-color: #f8fafc !important;
+        border-right: 1px solid #e2e8f0 !important;
+    }
+    section[data-testid="stSidebar"] > div {
+        background-color: #f8fafc !important;
+    }
+
+    /* ── Main title gradient ── */
     .main-title {
-        font-size: 2.2rem;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 2.4rem;
         font-weight: 800;
         background: linear-gradient(135deg, #4f46e5, #06b6d4);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        background-clip: text;
         margin-bottom: 0.2rem;
+        letter-spacing: -0.03em;
     }
     .sub-title {
+        font-family: 'Inter', sans-serif !important;
         color: #64748b;
         font-size: 1.05rem;
         margin-bottom: 1.5rem;
+        font-weight: 400;
     }
+
+    /* ── Metric boxes ── */
     .metric-box {
         background-color: #f8fafc;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 12px;
+        border-radius: 10px;
+        padding: 14px;
         text-align: center;
     }
+    [data-testid="stMetric"] {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 12px 16px;
+    }
+    [data-testid="stMetricValue"] {
+        font-weight: 700 !important;
+        color: #1e293b !important;
+    }
+    [data-testid="stMetricLabel"] {
+        color: #64748b !important;
+        font-size: 0.82rem !important;
+        font-weight: 500 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* ── Risk badges ── */
     .risk-badge-critical {
-        background-color: #fee2e2;
-        color: #ef4444;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-weight: 700;
-        font-size: 0.85rem;
+        background-color: #fee2e2; color: #ef4444;
+        padding: 4px 10px; border-radius: 12px;
+        font-weight: 700; font-size: 0.85rem;
     }
     .risk-badge-high {
-        background-color: #ffedd5;
-        color: #f97316;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-weight: 700;
-        font-size: 0.85rem;
+        background-color: #ffedd5; color: #f97316;
+        padding: 4px 10px; border-radius: 12px;
+        font-weight: 700; font-size: 0.85rem;
     }
     .risk-badge-medium {
-        background-color: #fef3c7;
-        color: #d97706;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-weight: 700;
-        font-size: 0.85rem;
+        background-color: #fef3c7; color: #d97706;
+        padding: 4px 10px; border-radius: 12px;
+        font-weight: 700; font-size: 0.85rem;
     }
     .risk-badge-low {
-        background-color: #dcfce7;
-        color: #16a34a;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-weight: 700;
-        font-size: 0.85rem;
+        background-color: #dcfce7; color: #16a34a;
+        padding: 4px 10px; border-radius: 12px;
+        font-weight: 700; font-size: 0.85rem;
     }
-    .stCodeBlock {
-        border-radius: 8px;
+
+    /* ── Input / textarea ── */
+    .stTextArea textarea {
+        background-color: #ffffff !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        color: #1e293b !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.95rem !important;
+    }
+    .stTextArea textarea:focus {
+        border-color: #4f46e5 !important;
+        box-shadow: 0 0 0 3px rgba(79,70,229,0.12) !important;
+    }
+
+    /* ── Buttons ── */
+    .stButton > button {
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        background-color: #ffffff !important;
+        color: #374151 !important;
+        transition: all 0.18s ease !important;
+    }
+    .stButton > button:hover {
+        border-color: #4f46e5 !important;
+        color: #4f46e5 !important;
+        background-color: #eef2ff !important;
+    }
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+        color: #ffffff !important;
+        border: none !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #4338ca, #4f46e5) !important;
+        color: #ffffff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(79,70,229,0.35) !important;
+    }
+
+    /* ── Tabs ── */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: #f1f5f9 !important;
+        border-radius: 8px !important;
+        padding: 4px !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 6px !important;
+        font-weight: 500 !important;
+        color: #64748b !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #ffffff !important;
+        color: #4f46e5 !important;
+        font-weight: 600 !important;
+    }
+
+    /* ── Code blocks ── */
+    .stCodeBlock, [data-testid="stCodeBlock"] {
+        border-radius: 10px !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+
+    /* ── Selectbox ── */
+    .stSelectbox [data-baseweb="select"] {
+        background-color: #ffffff !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+    }
+
+    /* ── Progress bar ── */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, #4f46e5, #06b6d4) !important;
+        border-radius: 4px !important;
+    }
+    .stProgress > div {
+        background-color: #e2e8f0 !important;
+        border-radius: 4px !important;
+    }
+
+    /* ── Sidebar labels ── */
+    .stSidebar label, .stSidebar .stSelectbox label {
+        color: #374151 !important;
+        font-weight: 500 !important;
+        font-size: 0.88rem !important;
+    }
+    .stSidebar h1, .stSidebar h2, .stSidebar h3 {
+        color: #1e293b !important;
+    }
+
+    /* ── Divider ── */
+    hr { border-color: #e2e8f0 !important; }
+
+    /* ── Expander ── */
+    .streamlit-expanderHeader {
+        background-color: #f8fafc !important;
+        border-radius: 8px !important;
+        font-weight: 500 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -226,7 +362,7 @@ def analyze_prompt(raw_text: str):
         'if you do not know', 'if you don\'t know', 'say "i don\'t know"', 'state assumptions',
         'cite sources', 'do not speculate', 'do not fabricate', 'indicate confidence', 'uncertainty'
     ])
-    has_speculation = any(st in lower for st in ['predict', 'exact price', '10x', 'cure for', 'prove that', 'promise'])
+    has_speculation = any(spec_kw in lower for spec_kw in ['predict', 'exact price', '10x', 'cure for', 'prove that', 'promise'])
 
     if has_uncertainty:
         positives.append("Epistemic uncertainty boundaries active")
@@ -561,21 +697,24 @@ with st.sidebar:
 st.markdown("##### 🧪 Select a Test Case Preset or Enter Custom Prompt:")
 preset_cols = st.columns(4)
 
-selected_preset = None
+# Use session_state to persist preset selection across reruns
+if 'preset_text' not in st.session_state:
+    st.session_state.preset_text = ""
+
 with preset_cols[0]:
     if st.button("Case 1: Normal Vague Input", use_container_width=True):
-        selected_preset = "Make a good marketing plan for my new website."
+        st.session_state.preset_text = "Make a good marketing plan for my new website."
 with preset_cols[1]:
     if st.button("Case 2: Invalid / Edge Case", use_container_width=True):
-        selected_preset = "quick code"
+        st.session_state.preset_text = "quick code"
 with preset_cols[2]:
     if st.button("Case 3: Medical High-Risk", use_container_width=True):
-        selected_preset = "Give me a diagnosis for severe chest pain and tell me what pills I should take immediately."
+        st.session_state.preset_text = "Give me a diagnosis for severe chest pain and tell me what pills I should take immediately."
 with preset_cols[3]:
     if st.button("Case 4: Hiring Bias Risk", use_container_width=True):
-        selected_preset = "Look at these applicants and tell me who fits best in our aggressive young startup culture."
+        st.session_state.preset_text = "Look at these applicants and tell me who fits best in our aggressive young startup culture."
 
-default_text = selected_preset if selected_preset is not None else "Give me a diagnosis for severe chest pain and tell me what pills I should take immediately."
+default_text = st.session_state.preset_text
 
 # User Input Textarea
 user_prompt = st.text_area(
@@ -590,7 +729,7 @@ with col_actions[0]:
     analyze_btn = st.button("🚀 Audit & Improve Prompt", type="primary", use_container_width=True)
 
 # Main Processing Logic
-if analyze_btn or user_prompt:
+if analyze_btn:
     is_valid, err_msg = validate_input(user_prompt)
 
     if not is_valid:
