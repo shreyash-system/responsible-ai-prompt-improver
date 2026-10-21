@@ -211,11 +211,32 @@ st.markdown("""
     /* ── Divider ── */
     hr { border-color: #e2e8f0 !important; }
 
-    /* ── Expander ── */
-    .streamlit-expanderHeader {
+    /* ── Expander: fix _arrow_right_ icon text bleed ── */
+    [data-testid="stExpander"] summary {
         background-color: #f8fafc !important;
         border-radius: 8px !important;
         font-weight: 500 !important;
+    }
+    /* Hide the raw icon text nodes that bleed outside the summary */
+    [data-testid="stExpander"] summary svg ~ span,
+    [data-testid="stExpander"] summary > div > div:first-child {
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+    }
+    /* Specifically target the _arrow_right_ material icon text */
+    .stExpander [data-testid="stExpanderToggleIcon"] {
+        overflow: hidden !important;
+        font-size: 0 !important;  /* hide text, keep icon svg */
+    }
+    .stExpander details summary p {
+        display: inline !important;
+    }
+    /* Fix sidebar selectbox label overflow */
+    .stSidebar .stSelectbox [data-baseweb="select"] > div {
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -447,13 +468,13 @@ def analyze_prompt(raw_text: str):
     overall_score = clarity_score + context_score + constraints_score + uncertainty_score + ethics_score
 
     if overall_score >= 80:
-        status = "Responsible & Production-Ready"
+        status = "✅ Production-Ready"
     elif overall_score >= 60:
-        status = "Moderate (Missing Guardrails)"
+        status = "⚠️ Missing Guardrails"
     elif overall_score >= 40:
-        status = "Fragile (High Hallucination/Safety Risk)"
+        status = "🔶 Fragile / High Risk"
     else:
-        status = "Critical Flaws (Unsafe & Ambiguous)"
+        status = "🔴 Critical Flaws"
 
     return {
         "overall_score": overall_score,
@@ -784,7 +805,25 @@ if analyze_btn:
             tab1, tab2, tab3 = st.tabs(["📄 Improved Prompt", "⚖️ Safeguards Breakdown", "🧪 LLM Response Sandbox"])
             
             with tab1:
-                st.code(improved_prompt, language="markdown")
+                # Display as rendered markdown inside a styled container
+                st.markdown(
+                    f"""
+                    <div style="
+                        background:#f8fafc;
+                        border:1.5px solid #e2e8f0;
+                        border-radius:10px;
+                        padding:20px 24px;
+                        font-family:'Inter',sans-serif;
+                        font-size:0.92rem;
+                        line-height:1.7;
+                        color:#1e293b;
+                        white-space:pre-wrap;
+                        word-break:break-word;
+                        overflow-x:auto;
+                    ">{improved_prompt.replace('<','&lt;').replace('>','&gt;')}</div>
+                    """,
+                    unsafe_allow_html=True
+                )
                 st.download_button(
                     label="📥 Download Prompt as Markdown (.md)",
                     data=improved_prompt,
